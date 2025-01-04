@@ -7,6 +7,7 @@ LOG_FILE="/home/randolph/Documenti/conky_log.txt"
 MACHINES=(
     "192.168.178.30:/home/randolph/.config/conky/adsb.conf"
     "192.168.178.32:/home/randolph/.config/conky/serverpi.conf"
+    "192.168.178.32:/home/randolph/.config/conky/serverpi_logs.conf"
     "192.168.178.59:/home/randolph/.config/conky/hp_mini.conf"
 )
 
