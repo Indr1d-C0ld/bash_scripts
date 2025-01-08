@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 #
-# Esempio di script per backup di un dispositivo (es. SD)
-# con possibilità di compressione, cattura log (solo ultime righe)
-# e spegnimento finale del sistema.
+# Script di esempio per BACKUP di un dispositivo (es. SD)
+# - Copia il contenuto di un device sorgente in un file immagine locale
+# - Opzionalmente lo comprime via gzip
+# - Genera un log leggero (solo ultime righe)
+# - Può spegnere la macchina a fine procedura, a scelta dell'utente
 
 ########################################
 #  SEZIONE COLORI E DECORAZIONI (ANSI) #
@@ -37,17 +39,16 @@ fi
 # 2. Mostra dispositivi       #
 ###############################
 banner "ELENCO DISPOSITIVI DISPONIBILI" "$CYAN"
-# lsblk dà un elenco leggibile di device con dimensioni, tipo FS, mountpoint, ecc.
 lsblk -o NAME,TYPE,SIZE,FSTYPE,MOUNTPOINT
 echo
-echo -e "Se desideri più dettagli, esegui manualmente:\n- fdisk -l\n- df -h"
+echo -e "Ulteriori dettagli? Esegui manualmente:\n- fdisk -l\n- df -h"
 echo
 
 ################################
 # 3. Richiesta device sorgente #
 ################################
 echo -e "${BOLD}Quale dispositivo vuoi usare come sorgente per il backup?${RESET}"
-echo "Ad esempio: /dev/sdb, /dev/mmcblk0, ecc."
+echo "Esempio: /dev/sdb, /dev/mmcblk0, ecc."
 
 # Abilitiamo l'auto-completamento dei percorsi con -e
 read -e -p "Inserisci il percorso del device (es. /dev/sdb): " DEVICE_SRC
@@ -61,7 +62,6 @@ fi
 #########################################
 # 4. Richiesta percorso/nome file di log
 #########################################
-# Usiamo -e (per auto-completion) e -i (per suggerire un valore di default)
 LOGFILE_DEFAULT="/home/randolph/Documenti/backup_sd.log"
 echo
 echo -e "${BOLD}Inserisci il percorso/nome completo del file di log.${RESET}"
@@ -107,6 +107,27 @@ if $COMPRESS; then
   fi
 fi
 
+###########################################
+# 7. Vuoi spegnere la macchina a fine job? 
+###########################################
+echo
+echo -e "${BOLD}Desideri spegnere la macchina al termine dell'operazione?${RESET}"
+select autospegni in "Sì" "No"; do
+  case $autospegni in
+    "Sì")
+        SHUTDOWN_AT_END=true
+        break
+        ;;
+    "No")
+        SHUTDOWN_AT_END=false
+        break
+        ;;
+    *)
+        echo "Scelta non valida."
+        ;;
+  esac
+done
+
 ###################################
 #  RIEPILOGO E CONFERMA           #
 ###################################
@@ -119,6 +140,11 @@ if $COMPRESS; then
 else
   echo -e "${CYAN}Compressione:         ${RESET}${BOLD}nessuna${RESET}"
 fi
+if $SHUTDOWN_AT_END; then
+  echo -e "${CYAN}Spegnimento finale:   ${RESET}${BOLD}SÌ${RESET}"
+else
+  echo -e "${CYAN}Spegnimento finale:   ${RESET}${BOLD}NO${RESET}"
+fi
 echo
 read -p "Confermi di voler procedere con il backup? (s/n): " CONFERMA
 if [[ "$CONFERMA" != "s" && "$CONFERMA" != "S" ]]; then
@@ -127,12 +153,11 @@ if [[ "$CONFERMA" != "s" && "$CONFERMA" != "S" ]]; then
 fi
 
 ############################################
-# 7. Esecuzione del backup con dd + gzip   #
+# 8. Esecuzione del backup con dd + gzip   #
 ############################################
 banner "AVVIO DEL BACKUP..." "$MAGENTA"
 echo "Potrebbe richiedere molto tempo..."
 echo "Verrà mostrato il progresso a schermo."
-echo "Al termine, le ultime righe di log verranno salvate in: $LOGFILE"
 echo
 
 TMP_LOG="/tmp/dd_backup_$$.log"   # file temporaneo per il log completo
@@ -140,8 +165,6 @@ rm -f "$TMP_LOG" 2>/dev/null      # rimuoviamo eventuali precedenti
 
 if $COMPRESS; then
   # Backup + compressione gzip
-  # Usiamo status=progress e reindirizziamo stderr (il progresso) su stdout.
-  # tee mostrerà a video e salverà tutto in TMP_LOG
   dd if="$DEVICE_SRC" bs=4M conv=sync,noerror status=progress 2>&1 \
     | gzip -${GZIP_LEVEL} \
     | tee "$TMP_LOG" \
@@ -153,9 +176,8 @@ else
 fi
 
 ############################################
-# 8. Mostra e salva SOLO le ultime righe   #
+# 9. Mostra e salva SOLO le ultime righe   #
 ############################################
-# Vogliamo un file di log leggero, quindi salviamo solo le ultime 20 righe.
 echo
 banner "FINE BACKUP" "$GREEN"
 echo "Salvataggio ultime righe del log in $LOGFILE..."
@@ -169,10 +191,14 @@ echo "-------------------------------------"
 rm -f "$TMP_LOG"
 
 ################################
-# 9. Spegnimento del sistema   #
+# 10. Spegnimento del sistema  #
 ################################
-echo
-echo -e "${YELLOW}Il sistema si spegnerà tra 5 secondi...${RESET}"
-sleep 5
-shutdown -h now
-
+if $SHUTDOWN_AT_END; then
+  echo
+  echo -e "${YELLOW}Il sistema si spegnerà tra 5 secondi...${RESET}"
+  sleep 5
+  shutdown -h now
+else
+  echo
+  echo -e "${GREEN}Operazione completata. Spegnimento NON richiesto.${RESET}"
+fi
