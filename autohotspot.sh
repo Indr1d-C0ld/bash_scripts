@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Configurazione
-KNOWN_SSIDS=("rete1" "rete2" "rete3")  # Elenco reti WiFi conosciute
-HOTSPOT_SSID="ssid"               # Nome rete Hotspot
-HOTSPOT_PASSWORD="password"        # Password rete Hotspot
+KNOWN_SSIDS=("-= Skynet =-" "rete2" "rete3")  # Elenco reti WiFi conosciute
+HOTSPOT_SSID="GLPi"               # Nome rete Hotspot
+HOTSPOT_PASSWORD="arkham666"        # Password rete Hotspot
 HIDE_SSID=0                           # 1 per nascondere l'SSID, 0 per visibile
 HOTSPOT_CHANNEL=6                     # Canale WiFi per l'hotspot
 
