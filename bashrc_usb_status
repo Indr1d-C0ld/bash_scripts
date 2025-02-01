@@ -1,34 +1,38 @@
-### Da aggiungere infondo al file .bashrc: ###
-
-# Funzione per controllare lo stato di due memorie USB usando lsblk
+# Funzione per controllare lo stato di due memorie USB
 check_usb() {
-    # Definisci in modo univoco i device delle due USB
     USB1_DEV="/dev/sda1"
     USB2_DEV="/dev/sdb1"
-    
+
     local status=""
-    
-    # Estrai la colonna MOUNTPOINT (senza intestazioni, grazie a -n)
-    mount1=$(lsblk -n -o MOUNTPOINT "$USB1_DEV")
-    mount2=$(lsblk -n -o MOUNTPOINT "$USB2_DEV")
-    
-    # Se il campo mount è non vuoto e contiene una stringa (solitamente inizia con /),
-    # consideriamo il dispositivo montato.
-    if [ -n "$mount1" ] && [[ "$mount1" =~ ^/ ]]; then
-        status+="[USB Storage: ✔] "
+    local GREEN="\e[32m"  # Verde (montato)
+    local RED="\e[31m"    # Rosso (non montato)
+    local GRAY="\e[90m"   # Grigio (scollegato)
+    local RESET="\e[0m"   # Reset colore
+
+    if [ -b "$USB1_DEV" ]; then
+        mount1=$(lsblk -n -o MOUNTPOINT "$USB1_DEV")
+        if [ -n "$mount1" ] && [[ "$mount1" =~ ^/ ]]; then
+            status+="[$GREEN USB Storage: ✔ $RESET] "
+        else
+            status+="[$RED USB Storage: ✖ $RESET] "
+        fi
     else
-        status+="[USB Storage: ✖] "
+        status+="[$GRAY USB Storage: ⬜ $RESET] "
     fi
-    
-    if [ -n "$mount2" ] && [[ "$mount2" =~ ^/ ]]; then
-        status+="[USB Backup: ✔]"
+
+    if [ -b "$USB2_DEV" ]; then
+        mount2=$(lsblk -n -o MOUNTPOINT "$USB2_DEV")
+        if [ -n "$mount2" ] && [[ "$mount2" =~ ^/ ]]; then
+            status+="[$GREEN USB Backup: ✔ $RESET]"
+        else
+            status+="[$RED USB Backup: ✖ $RESET]"
+        fi
     else
-        status+="[USB Backup: ✖]"
+        status+="[$GRAY USB Backup: ⬜ $RESET]"
     fi
-    
-    echo "$status"
+
+    printf "$status"
 }
 
-# Imposta il prompt in modo che la funzione check_usb venga eseguita ad ogni visualizzazione.
-# Usando le doppie virgolette e sfuggendo il dollaro (\$) si assicura l'esecuzione al momento del prompt.
-export PS1="\[\e[32m\]\u@\h:\w \$(check_usb)\[\e[0m\] \$ "
+# Impostazione del prompt con sequenze di escape corrette
+export PS1="\[\e[34m\]\u@\h:\w \[\$(check_usb)\] \[\e[0m\]\$ "
