@@ -5,35 +5,36 @@ check_usb() {
     USB2_DEV="/dev/sdb1"
 
     local status=""
-    local GREEN="\e[32m"  # Verde (montato)
-    local RED="\e[31m"    # Rosso (non montato)
-    local GRAY="\e[90m"   # Grigio (scollegato)
-    local RESET="\e[0m"   # Reset colore
+    local WHITE="\[\e[97m\]"  # Bianco brillante
+    local GREEN="\[\e[32m\]"  # Verde (montato)
+    local RED="\[\e[31m\]"    # Rosso (non montato)
+    local GRAY="\[\e[90m\]"   # Grigio (scollegato)
+    local RESET="\[\e[0m\]"   # Reset colore
 
     if [ -b "$USB1_DEV" ]; then
         mount1=$(lsblk -n -o MOUNTPOINT "$USB1_DEV")
         if [ -n "$mount1" ] && [[ "$mount1" =~ ^/ ]]; then
-            status+="[$GREEN USB Storage: ✔ $RESET] "
+            status+="${WHITE}[${GREEN}USB Storage: ✔${WHITE}] "
         else
-            status+="[$RED USB Storage: ✖ $RESET] "
+            status+="${WHITE}[${RED}USB Storage: ✖${WHITE}] "
         fi
     else
-        status+="[$GRAY USB Storage: ⬜ $RESET] "
+        status+="${WHITE}[${GRAY}USB Storage: ⬜${WHITE}] "
     fi
 
     if [ -b "$USB2_DEV" ]; then
         mount2=$(lsblk -n -o MOUNTPOINT "$USB2_DEV")
         if [ -n "$mount2" ] && [[ "$mount2" =~ ^/ ]]; then
-            status+="[$GREEN USB Backup: ✔ $RESET]"
+            status+="${WHITE}[${GREEN}USB Backup: ✔${WHITE}]"
         else
-            status+="[$RED USB Backup: ✖ $RESET]"
+            status+="${WHITE}[${RED}USB Backup: ✖${WHITE}]"
         fi
     else
-        status+="[$GRAY USB Backup: ⬜ $RESET]"
+        status+="${WHITE}[${GRAY}USB Backup: ⬜${WHITE}]"
     fi
 
-    printf "$status"
+    echo -n "$status"
 }
 
 # Impostazione del prompt con sequenze di escape corrette
-export PS1="\[\e[34m\]\u@\h:\w \[\$(check_usb)\] \[\e[0m\]\$ "
+export PS1="\[\e[34m\]\u@\h:\w $(check_usb) \[\e[0m\]\$ "
