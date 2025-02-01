@@ -1,3 +1,4 @@
+### Aggiungere in fondo al file .bashrc ###
 # Funzione per controllare lo stato di due memorie USB
 check_usb() {
     USB1_DEV="/dev/sda1"
