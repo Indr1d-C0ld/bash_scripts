@@ -1,0 +1,34 @@
+### Da aggiungere infondo al file .bashrc: ###
+
+# Funzione per controllare lo stato di due memorie USB usando lsblk
+check_usb() {
+    # Definisci in modo univoco i device delle due USB
+    USB1_DEV="/dev/sda1"
+    USB2_DEV="/dev/sdb1"
+    
+    local status=""
+    
+    # Estrai la colonna MOUNTPOINT (senza intestazioni, grazie a -n)
+    mount1=$(lsblk -n -o MOUNTPOINT "$USB1_DEV")
+    mount2=$(lsblk -n -o MOUNTPOINT "$USB2_DEV")
+    
+    # Se il campo mount è non vuoto e contiene una stringa (solitamente inizia con /),
+    # consideriamo il dispositivo montato.
+    if [ -n "$mount1" ] && [[ "$mount1" =~ ^/ ]]; then
+        status+="[USB Storage: ✔] "
+    else
+        status+="[USB Storage: ✖] "
+    fi
+    
+    if [ -n "$mount2" ] && [[ "$mount2" =~ ^/ ]]; then
+        status+="[USB Backup: ✔]"
+    else
+        status+="[USB Backup: ✖]"
+    fi
+    
+    echo "$status"
+}
+
+# Imposta il prompt in modo che la funzione check_usb venga eseguita ad ogni visualizzazione.
+# Usando le doppie virgolette e sfuggendo il dollaro (\$) si assicura l'esecuzione al momento del prompt.
+export PS1="\[\e[32m\]\u@\h:\w \$(check_usb)\[\e[0m\] \$ "
