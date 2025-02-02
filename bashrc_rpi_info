@@ -1,0 +1,10 @@
+### Aggiungere in fondo al file .bashrc ###
+# Informazioni diagnostiche
+echo "========================================"
+echo -e "\e[32mHostname:\e[0m $(hostname)"
+echo -e "\e[34mUptime:\e[0m $(uptime -p)"
+echo -e "\e[31mTemperatura CPU:\e[0m $(vcgencmd measure_temp)"
+echo "Utilizzo RAM: $(free -h | awk '/^Mem/ {print $3 "/" $2}')"
+echo "Spazio Disco Usato: $(df -h / | awk '/\// {print $3 "/" $2}')"
+echo "Indirizzo IP: $(hostname -I | awk '{print $1}')"
+echo "========================================"
