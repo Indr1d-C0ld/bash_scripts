@@ -1,40 +1,46 @@
 ### Aggiungere in fondo al file .bashrc ###
-# Funzione per controllare lo stato di due memorie USB
+# Definizione globale dei colori
+COLOR_WHITE=$'\[\e[97m\]'  # Bianco brillante (per le parentesi)
+COLOR_GREEN=$'\[\e[32m\]'  # Verde (per indicare montato)
+COLOR_RED=$'\[\e[31m\]'    # Rosso (per indicare non montato)
+COLOR_GRAY=$'\[\e[90m\]'   # Grigio (per indicare dispositivo assente)
+COLOR_RESET=$'\[\e[0m\]'
+
+# Funzione che controlla lo stato dei dispositivi USB e restituisce la stringa formattata
 check_usb() {
     USB1_DEV="/dev/sda1"
     USB2_DEV="/dev/sdb1"
-
     local status=""
-    local WHITE="\[\e[97m\]"  # Bianco brillante
-    local GREEN="\[\e[32m\]"  # Verde (montato)
-    local RED="\[\e[31m\]"    # Rosso (non montato)
-    local GRAY="\[\e[90m\]"   # Grigio (scollegato)
-    local RESET="\[\e[0m\]"   # Reset colore
 
+    # Controlla USB Storage
     if [ -b "$USB1_DEV" ]; then
-        mount1=$(lsblk -n -o MOUNTPOINT "$USB1_DEV")
-        if [ -n "$mount1" ] && [[ "$mount1" =~ ^/ ]]; then
-            status+="${WHITE}[${GREEN}USB Storage: ✔${WHITE}] "
-        else
-            status+="${WHITE}[${RED}USB Storage: ✖${WHITE}] "
-        fi
+         mount1=$(lsblk -n -o MOUNTPOINT "$USB1_DEV")
+         if [[ -n "$mount1" && "$mount1" =~ ^/ ]]; then
+             status+="${COLOR_WHITE}[${COLOR_GREEN}USB Storage: ✔${COLOR_WHITE}] "
+         else
+             status+="${COLOR_WHITE}[${COLOR_RED}USB Storage: ✖${COLOR_WHITE}] "
+         fi
     else
-        status+="${WHITE}[${GRAY}USB Storage: ⬜${WHITE}] "
+         status+="${COLOR_WHITE}[${COLOR_GRAY}USB Storage: ⬜${COLOR_WHITE}] "
     fi
 
+    # Controlla USB Backup
     if [ -b "$USB2_DEV" ]; then
-        mount2=$(lsblk -n -o MOUNTPOINT "$USB2_DEV")
-        if [ -n "$mount2" ] && [[ "$mount2" =~ ^/ ]]; then
-            status+="${WHITE}[${GREEN}USB Backup: ✔${WHITE}]"
-        else
-            status+="${WHITE}[${RED}USB Backup: ✖${WHITE}]"
-        fi
+         mount2=$(lsblk -n -o MOUNTPOINT "$USB2_DEV")
+         if [[ -n "$mount2" && "$mount2" =~ ^/ ]]; then
+             status+="${COLOR_WHITE}[${COLOR_GREEN}USB Backup: ✔${COLOR_WHITE}]"
+         else
+             status+="${COLOR_WHITE}[${COLOR_RED}USB Backup: ✖${COLOR_WHITE}]"
+         fi
     else
-        status+="${WHITE}[${GRAY}USB Backup: ⬜${WHITE}]"
+         status+="${COLOR_WHITE}[${COLOR_GRAY}USB Backup: ⬜${COLOR_WHITE}]"
     fi
 
     echo -n "$status"
 }
 
-# Impostazione del prompt con sequenze di escape corrette
-export PS1="\[\e[34m\]\u@\h:\w $(check_usb) \[\e[0m\]\$ "
+update_prompt() {
+   PS1=$'\[\e[34m\]\u@\h:\w '"$(check_usb)"$'\[\e[0m\]\$ '
+}
+
+PROMPT_COMMAND=update_prompt
