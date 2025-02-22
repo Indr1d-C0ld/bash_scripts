@@ -25,10 +25,39 @@ MMC_USAGE=$(df -h | grep '/dev/mmcblk0p2' | awk '{print "💾 Spazio usato su mm
 # Uptime
 UPTIME=$(uptime -p | sed 's/up //')
 
-# Riepilogo con HTML
-MESSAGE="🔍 <b>Stato Raspberry Pi</b>%0A%0A$USB_STATUS%0A$DISK_USAGE%0A$MMC_USAGE%0A⏳ Uptime: $UPTIME%0A🌡 CPU Temp: $CPU_TEMP"
+# Carico di sistema (load average)
+LOAD=$(uptime | awk -F'load average:' '{print $2}' | sed 's/^ //')
+
+# IP locali e WAN
+LOCAL_IP=$(hostname -I | awk '{print $1}')
+WAN_IP=$(curl -s ifconfig.me)
+
+# Stato dei servizi personalizzati
+SERVICES_LIST=("auto_seed.service" "irc_bot.service" "bbs_server.service" "monitor_transmission.service" "pihole-FTL.service" "fbquery_bot.service" "transmission-daemon.service" "usbmon2tg.service" "weechat.service" "hugo2tg.service")
+SERVICE_STATUS=""
+for SERVICE in "${SERVICES_LIST[@]}"; do
+    STATUS=$(systemctl is-active "$SERVICE")
+    if [ "$STATUS" = "active" ]; then
+        ICON="✅"
+    else
+        ICON="❌"
+    fi
+    SERVICE_STATUS+="$ICON $SERVICE%0A"
+done
+
+# Composizione del messaggio con HTML (usa %0A per nuove linee)
+MESSAGE="🔍 <b>Stato Raspberry Pi</b>%0A%0A"
+MESSAGE+="$USB_STATUS%0A"
+MESSAGE+="$DISK_USAGE%0A"
+MESSAGE+="$MMC_USAGE%0A"
+MESSAGE+="⏳ Uptime: $UPTIME%0A"
+MESSAGE+="🌡 CPU Temp: $CPU_TEMP%0A"
+MESSAGE+="📶 IP Locale: $LOCAL_IP%0A"
+MESSAGE+="🌐 IP WAN: $WAN_IP%0A"
+MESSAGE+="⚙️ Load: $LOAD%0A%0A"
+MESSAGE+="<b>Stato Servizi</b>%0A"
+MESSAGE+="$SERVICE_STATUS"
 
 # Invio a Telegram
 URL="https://api.telegram.org/bot$TOKEN/sendMessage"
 curl -s -X POST "$URL" -d chat_id="$CHAT_ID" -d text="$MESSAGE" -d parse_mode="HTML"
-
