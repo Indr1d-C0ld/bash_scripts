@@ -6,7 +6,9 @@
 # 3) Backup con partclone (solo blocchi usati)
 # 4) Backup file-level (rsync)
 # 5) (Opzionale) Riduzione partizione ext4 prima di clonare
-# 6) Opzione di compressione e di spegnimento finale
+# 6) Opzione di compressione gzip e spegnimento finale
+#
+# NOTA: Assicurati di testare lo script in ambiente sicuro prima di usarlo su dati importanti!
 
 ########################################
 #  SEZIONE COLORI E DECORAZIONI (ANSI) #
@@ -61,11 +63,10 @@ reduce_partition_ext4() {
   }
 
   # 4. Riduzione della partizione con parted
-  #    - Qui assumiamo che $dev_partition sia tipo /dev/sdb1
-  #    - Il disco è /dev/sdb, la partizione è "1"
+  #    - Assumiamo che $dev_partition sia tipo /dev/sdb1
   local disk device_number
-  disk=$(echo "$dev_partition" | sed 's/[0-9]*$//')  # /dev/sdb
-  device_number=$(echo "$dev_partition" | grep -o '[0-9]*$')  # 1
+  disk=$(echo "$dev_partition" | sed 's/[0-9]*$//')  # es. /dev/sdb
+  device_number=$(echo "$dev_partition" | grep -o '[0-9]*$')  # es. 1
 
   echo -e "${YELLOW}Ridimensionamento partizione con parted...${RESET}"
   parted "$disk" resizepart "$device_number" "$new_size" || {
@@ -122,8 +123,7 @@ done
 REDUCE_BEFORE=false
 REDUCE_SIZE=""
 if [[ "$method" = "1" || "$method" = "2" || "$method" = "3" ]]; then
-  # Ridurre la partizione ha senso per dd o partclone
-  # (rsync è file-level, quindi la riduzione partizione è superflua).
+  # Ridurre la partizione ha senso per backup block-level
   echo
   echo -e "${BOLD}Vuoi provare a ridurre una partizione ext4 prima di clonare?${RESET}"
   select riduci in "Sì" "No"; do
@@ -214,9 +214,6 @@ LOGFILE_DEFAULT="/home/randolph/Documenti/backup.log"
 echo
 read -e -i "$LOGFILE_DEFAULT" -p "Inserisci il percorso/nome del file di log (default sopra): " LOGFILE
 
-# Se metodo = rsync, chiederemo "sorgente" (device montato) e "destinazione" (cartella)
-# Altrimenti chiediamo "device sorgente" e "file immagine destinazione"
-
 if [[ "$method" = "4" ]]; then
   # Backup file-level (rsync)
   echo
@@ -234,9 +231,8 @@ if [[ "$method" = "4" ]]; then
   echo "Esempio: /home/randolph/Documenti/backup_sd_folder"
   read -e -p "Cartella destinazione: " DST_FOLDER
 
-  # Non ci serve un file immagine, perché rsync lavora file-level
+  # Per rsync non serve file immagine
   IMGFILE=""  
-
 else
   # Metodi 1, 2, 3 => clonazione block-level
   echo
@@ -309,72 +305,43 @@ fi
 #  ESECUZIONE DEL BACKUP (metodo scelto) #
 ##########################################
 banner "AVVIO DEL BACKUP..." "$MAGENTA"
-TMP_LOG="/tmp/backup_$$.log"
-rm -f "$TMP_LOG" 2>/dev/null
 
 case "$method" in
   "1") 
     # Clonazione completa con dd
     if $COMPRESS; then
-      dd if="$DEVICE_SRC" bs=4M conv=sync,noerror status=progress 2>&1 \
-        | gzip -$GZIP_LEVEL \
-        | tee "$TMP_LOG" \
-        > "${IMGFILE}.gz"
+      dd if="$DEVICE_SRC" bs=4M conv=sync,noerror status=progress \
+        2> >(tee -a "$LOGFILE" >&2) | gzip -$GZIP_LEVEL > "${IMGFILE}.gz"
     else
-      dd if="$DEVICE_SRC" of="$IMGFILE" bs=4M conv=sync,noerror status=progress 2>&1 \
-        | tee "$TMP_LOG"
+      dd if="$DEVICE_SRC" bs=4M conv=sync,noerror status=progress \
+        2> >(tee -a "$LOGFILE" >&2) > "$IMGFILE"
     fi
     ;;
   "2")
     # Clonazione "sparse" con dd
-    # conv=sparse cerca di non scrivere fisicamente i blocchi di zero nell'immagine
-    # (utile se il filesystem di destinazione supporta i file 'sparse')
     if $COMPRESS; then
-      dd if="$DEVICE_SRC" bs=4M conv=sparse,sync,noerror status=progress 2>&1 \
-        | gzip -$GZIP_LEVEL \
-        | tee "$TMP_LOG" \
-        > "${IMGFILE}.gz"
+      dd if="$DEVICE_SRC" bs=4M conv=sparse,sync,noerror status=progress \
+        2> >(tee -a "$LOGFILE" >&2) | gzip -$GZIP_LEVEL > "${IMGFILE}.gz"
     else
-      dd if="$DEVICE_SRC" of="$IMGFILE" bs=4M conv=sparse,sync,noerror status=progress 2>&1 \
-        | tee "$TMP_LOG"
+      dd if="$DEVICE_SRC" bs=4M conv=sparse,sync,noerror status=progress \
+        2> >(tee -a "$LOGFILE" >&2) > "$IMGFILE"
     fi
     ;;
   "3")
-    # Backup con partclone
-    # In base al filesystem, potresti usare partclone.ext4, partclone.vfat, ecc.
-    # Partclone cercherà di copiare solo i blocchi effettivamente utilizzati.
-    # Esempio generico (ext4):
+    # Backup con partclone (es. per ext4)
     if $COMPRESS; then
-      partclone.ext4 -c -s "$DEVICE_SRC" -o - 2>&1 \
-        | gzip -$GZIP_LEVEL \
-        | tee "$TMP_LOG" \
-        > "${IMGFILE}.gz"
+      partclone.ext4 -c -s "$DEVICE_SRC" -o - 2> >(tee -a "$LOGFILE" >&2) \
+        | gzip -$GZIP_LEVEL > "${IMGFILE}.gz"
     else
-      partclone.ext4 -c -s "$DEVICE_SRC" -o "$IMGFILE" 2>&1 \
-        | tee "$TMP_LOG"
+      partclone.ext4 -c -s "$DEVICE_SRC" -o "$IMGFILE" 2> >(tee -a "$LOGFILE" >&2)
     fi
     ;;
   "4")
     # Backup file-level con rsync
-    # Non prevede compressione "inline" (potresti compressare successivamente).
-    # Se vuoi compressione "al volo", potresti usare un trucco con tar+gzip.
     echo "Avvio rsync da $SRC_FOLDER a $DST_FOLDER ..."
-    rsync -avh --progress "$SRC_FOLDER/" "$DST_FOLDER/" 2>&1 | tee "$TMP_LOG"
+    rsync -avh --progress "$SRC_FOLDER/" "$DST_FOLDER/" 2> >(tee -a "$LOGFILE" >&2)
     ;;
 esac
-
-###########################################
-#  Salvataggio log finale (solo ultime 20) #
-###########################################
-banner "FINE BACKUP" "$GREEN"
-echo "Salvataggio ultime righe del log in $LOGFILE..."
-tail -n 20 "$TMP_LOG" > "$LOGFILE"
-echo "Ecco un estratto del log finale:"
-echo "-------------------------------------"
-cat "$LOGFILE"
-echo "-------------------------------------"
-
-rm -f "$TMP_LOG"
 
 ################################
 #  Spegnimento del sistema     #
