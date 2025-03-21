@@ -33,7 +33,7 @@ LOCAL_IP=$(hostname -I | awk '{print $1}')
 WAN_IP=$(curl -s ifconfig.me)
 
 # Stato dei servizi personalizzati
-SERVICES_LIST=("auto_seed.service" "irc_bot.service" "bbs_server.service" "monitor_transmission.service" "pihole-FTL.service" "fbquery_bot.service" "transmission-daemon.service" "usbmon2tg.service" "weechat.service" "hugo2tg.service")
+SERVICES_LIST=("auto_seed.service" "irc_bot.service" "bbs_server.service" "monitor_transmission.service" "pihole-FTL.service" "fbquery_bot.service" "transmission-daemon.service" "usbmon2tg.service" "weechat.service" "hugo2tg.service" "lcd_diagnostics.service")
 SERVICE_STATUS=""
 for SERVICE in "${SERVICES_LIST[@]}"; do
     STATUS=$(systemctl is-active "$SERVICE")
