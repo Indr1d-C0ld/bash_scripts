@@ -32,9 +32,9 @@ fi
 # 1) COSTRUZIONE DELLA PIPELINE DI RIPGREP PER RICERCA “AND” (case-insensitive)
 #    --color=never: evitiamo sequenze di escape indesiderate
 # ------------------------------------------------------------------------------
-RESULT="rg --color=never -i \"${KEYWORDS[0]}\" \"$FILE_NAME\""
+RESULT="rg -a -uu --no-config --no-mmap --color=never -i \"${KEYWORDS[0]}\" \"$FILE_NAME\""
 for KW in "${KEYWORDS[@]:1}"; do
-  RESULT="$RESULT | rg --color=never -i \"$KW\""
+  RESULT="$RESULT | rg -a -uu --no-config --no-mmap --color=never -i \"$KW\""
 done
 
 # ------------------------------------------------------------------------------
@@ -120,4 +120,3 @@ echo -e "\nCerco nel file '$FILE_NAME' le righe contenenti (AND) tutte le keywor
 echo -e "Coloro i campi, evidenzio le keyword (case-sensitive) in giallo bold, e gli indirizzi email in ciano.\n"
 
 eval "$COMMAND"
-
