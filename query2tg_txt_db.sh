@@ -64,9 +64,9 @@ fi
 # ------------------------------------------------------------------------------
 # 1) COSTRUZIONE DELLA PIPELINE DI RIPGREP PER RICERCA “AND” (case-insensitive)
 # ------------------------------------------------------------------------------
-RESULT="rg --color=never -i \"${KEYWORDS[0]}\" \"$FILE_NAME\""
+RESULT="rg -a -uu --no-config --no-mmap --color=never -i \"${KEYWORDS[0]}\" \"$FILE_NAME\""
 for KW in "${KEYWORDS[@]:1}"; do
-  RESULT="$RESULT | rg --color=never -i \"$KW\""
+  RESULT="$RESULT | rg -a -uu --no-config --no-mmap --color=never -i \"$KW\""
 done
 
 # ------------------------------------------------------------------------------
